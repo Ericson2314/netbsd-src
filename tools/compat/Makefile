@@ -1,6 +1,6 @@
 #	$NetBSD: Makefile,v 1.89 2021/02/25 13:41:58 christos Exp $
 
-HOSTLIB=	nbcompat
+LIB=	nbcompat
 
 .include <bsd.hostinit.mk>
 
@@ -82,11 +82,6 @@ CONFIGURE_ARGS=	--cache-file=config.cache
 CONFIGURE_ARGS+=--silent
 .endif
 
-config.cache: include/.stamp configure nbtool_config.h.in defs.mk.in
-	rm -f ${.TARGET}
-	CC=${HOST_CC:Q} CFLAGS=${HOST_CFLAGS:Q} LDFLAGS=${HOST_LDFLAGS:Q} \
-		${HOST_SH} ${.CURDIR}/configure ${CONFIGURE_ARGS}
-
 defs.mk: config.cache
 	@touch ${.TARGET}
 
@@ -105,63 +100,45 @@ include/.stamp:
 
 # Install rules
 
-HOST_LIBDIR=	${TOOLDIR}/lib
-HOST_INCSDIR=	${TOOLDIR}/include
-HOST_SHAREDIR= ${TOOLDIR}/share
-
 install:	.PHONY install.lib includes install.defs.mk
 
-# Install lib${HOSTLIB}.a in ${TOOLDIR}/lib
-install.lib: .PHONY ${HOST_LIBDIR}/lib${HOSTLIB}.a
-${HOST_LIBDIR}/lib${HOSTLIB}.a: lib${HOSTLIB}.a
+# Install lib${LIB}.a in ${TOOLDIR}/lib
+install.lib: .PHONY ${LIBDIR}/lib${LIB}.a
+${LIBDIR}/lib${LIB}.a: lib${LIB}.a
 	${_MKTARGET_INSTALL}
-	${HOST_INSTALL_DIR} ${HOST_LIBDIR}
-	${HOST_INSTALL_FILE} -m ${LIBMODE} ${.ALLSRC} ${.TARGET}
+	${INSTALL_DIR} ${LIBDIR}
+	${INSTALL_FILE} -m ${LIBMODE} ${.ALLSRC} ${.TARGET}
 
 .for _f in ${INCFILES}
-HOST_INCINSTFILES+= ${HOST_INCSDIR}/compat/${_f}
-${HOST_INCSDIR}/compat/${_f}: ${_f}
+INCINSTFILES+= ${INCSDIR}/compat/${_f}
+${INCSDIR}/compat/${_f}: ${_f}
 	${_MKTARGET_INSTALL}
-	${HOST_INSTALL_FILE} ${.ALLSRC} ${.TARGET}
+	${INSTALL_FILE} ${.ALLSRC} ${.TARGET}
 .endfor
 
 .for _d in ${INCSUBDIRS}
-HOST_INCINSTDIRS+= ${HOST_INCSDIR}/compat/${_d}
-${HOST_INCSDIR}/compat/${_d}:
+INCINSTDIRS+= ${INCSDIR}/compat/${_d}
+${INCSDIR}/compat/${_d}:
 	${_MKTARGET_INSTALL}
-	${HOST_INSTALL_DIR} ${.TARGET}
+	${INSTALL_DIR} ${.TARGET}
 .endfor
 
 # Install include files in ${TOOLDIR}/include/compat
-includes: .PHONY ${HOST_INCINSTDIRS} .WAIT ${HOST_INCINSTFILES}
+includes: .PHONY ${INCINSTDIRS} .WAIT ${INCINSTFILES}
 	@(cd include && find . -name '*.h' -print | while read f ; do \
-	    ${HOST_INSTALL_FILE} $$f ${HOST_INCSDIR}/compat/$$f ; \
+	    ${INSTALL_FILE} $$f ${INCSDIR}/compat/$$f ; \
 	done)
 
 
 # Install defs.mk in ${TOOLDIR}/share/compat
-install.defs.mk: .PHONY ${HOST_SHAREDIR}/compat/defs.mk
-${HOST_SHAREDIR}/compat/defs.mk: defs.mk
+install.defs.mk: .PHONY ${SHAREDIR}/compat/defs.mk
+${SHAREDIR}/compat/defs.mk: defs.mk
 	${_MKTARGET_INSTALL}
-	${HOST_INSTALL_DIR} ${HOST_SHAREDIR}
-	${HOST_INSTALL_DIR} ${HOST_SHAREDIR}/compat
-	${HOST_INSTALL_FILE} ${.ALLSRC} ${.TARGET}
+	${INSTALL_DIR} ${SHAREDIR}
+	${INSTALL_DIR} ${SHAREDIR}/compat
+	${INSTALL_FILE} ${.ALLSRC} ${.TARGET}
 
-# bsd.hostlib.mk wants HOST_CPPFLAGS, not CPPFLAGS
-
-HOST_CPPFLAGS:=	${CPPFLAGS}
-CPPFLAGS:=	# empty
-
-.include <bsd.hostlib.mk>
-
-# Use uninstalled copy of host-mkdep
-HOST_MKDEP_OBJ!= cd ${.CURDIR}/../host-mkdep && ${PRINTOBJDIR}
-HOST_MKDEP=	${HOST_MKDEP_OBJ}/host-mkdep
-MKDEP=		${HOST_MKDEP}
-
-# Use uninstalled copy of the install program
-INSTALL_OBJ!=	cd ${NETBSDSRCDIR}/tools/binstall && ${PRINTOBJDIR}
-INSTALL=	${INSTALL_OBJ}/xinstall
+.include <bsd.lib.mk>
 
 # Run "${TOOLDIR}/bin/nbmake-${MACHINE} regen" by hand after editing
 # configure.ac.  See more detailed instructions in configure.ac.
